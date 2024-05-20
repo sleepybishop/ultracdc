@@ -11,33 +11,30 @@ static const uint64_t MASK_S = 0x2F;
 static const uint64_t MASK_L = 0x2C;
 static const uint64_t LEST = 64;
 
-static uint32_t normal_size(const uint32_t mi, const uint32_t av, const uint32_t ma)
+static uint32_t normal_size(const uint32_t mi, uint32_t av, const uint32_t ma)
 {
-    uint32_t off = mi + MIN_CHUNK_SIZE;
-    if (off > av)
-        return off;
+    uint32_t ns = mi + (1 << 13);
+    if (ns > av)
+        return ns;
     if (av > ma)
         return ma;
     return av;
 }
 
-static uint32_t cut(const uint8_t *src, const uint32_t len, const uint32_t mi, const uint32_t ma, const uint32_t ns,
-                    const uint32_t mask_s, const uint32_t mask_l)
+static uint32_t cut(const uint8_t *src, const uint32_t len, const uint32_t mi, const uint32_t ma, uint32_t ns)
 {
-    uint32_t n = mi, mask = mask_s, cnt = 0;
+    uint32_t n = len, cnt = 0;
 
-    if ((len - 8) <= mi)
-        return len;
-    if (len >= ma)
+    if (n <= mi)
+        return n;
+    if (n >= ma)
         n = ma;
-    else if (len <= ns)
-        n = ns;
+    else if (n <= ns)
+        ns = n;
 
     uint64_t *owin = (uint64_t *)(src + mi);
     uint64_t dist = __builtin_popcountll(*owin ^ PATTERN);
     for (uint32_t i = mi + 8; i < n; i += 8) {
-        if (i == ns)
-            mask = mask_l;
         if (i + 8 > n)
             break;
 
@@ -49,7 +46,7 @@ static uint32_t cut(const uint8_t *src, const uint32_t len, const uint32_t mi, c
         } else {
             cnt = 0;
             for (uint32_t j = 0; j < 8; j++) {
-                if ((dist & mask) == 0)
+                if ((dist & ((i < ns) ? MASK_S : MASK_L)) == 0)
                     return i + 8;
                 dist += hdist[src[i + j]][src[i + j - 8]];
             }
@@ -72,7 +69,7 @@ size_t ultracdc_update(cdc_ctx *ctx, uint8_t *data, size_t len, int end, on_chun
 {
     size_t offset = 0;
     while (((len - offset) >= ctx->ma) || (end && (offset < len))) {
-        uint32_t cp = cut(data + offset, len - offset, ctx->mi, ctx->ma, ctx->ns, MASK_S, MASK_L);
+        uint32_t cp = cut(data + offset, len - offset, ctx->mi, ctx->ma, ctx->ns);
         cb(arg, ctx->pos + offset, cp);
         offset += cp;
     }
