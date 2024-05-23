@@ -1,12 +1,11 @@
 #include "ultracdc.h"
-#include "table.h"
 
 #define ULTRACDC_CLAMP(x, a, b) ((x < (a)) ? (a) : ((x > b) ? b : x))
 
 #define MIN_CHUNK_SIZE (1 << 11) // 2 KiB
 #define MAX_CHUNK_SIZE (1 << 16) // 64 KiB
 
-static const uint64_t PATTERN = 0xAAAAAAAAAAAAAAAA;
+static const uint64_t PATTERN = 0xAAAAAAAAAAAAAAAAULL;
 static const uint64_t MASK_S = 0x2F;
 static const uint64_t MASK_L = 0x2C;
 static const uint64_t LEST = 64;
@@ -34,10 +33,7 @@ static uint32_t cut(const uint8_t *src, const uint32_t len, const uint32_t mi, c
 
     uint64_t *owin = (uint64_t *)(src + mi);
     uint64_t dist = __builtin_popcountll(*owin ^ PATTERN);
-    for (uint32_t i = mi + 8; i < n; i += 8) {
-        if (i + 8 > n)
-            break;
-
+    for (uint32_t i = mi + 8; i + 8 < n; i += 8) {
         uint64_t *iwin = (uint64_t *)(src + i);
         if ((*owin ^ *iwin) == 0) {
             cnt++;
@@ -48,7 +44,9 @@ static uint32_t cut(const uint8_t *src, const uint32_t len, const uint32_t mi, c
             for (uint32_t j = 0; j < 8; j++) {
                 if ((dist & ((i < ns) ? MASK_S : MASK_L)) == 0)
                     return i + 8;
-                dist += hdist[src[i + j]][src[i + j - 8]];
+                //SLIDE(dist);
+                dist -= __builtin_popcount(src[i + j - 8] ^ 0xAA);
+                dist += __builtin_popcount(src[i + j] ^ 0xAA);
             }
             owin = iwin;
         }
