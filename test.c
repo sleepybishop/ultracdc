@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
 
     clock_gettime(CLOCK_MONOTONIC, &tp1);
     printf("%8s|%8s\n", "offset", "length");
-    size_t bytes = ultracdc_stream(s, 8192, 12288, 16384, print_chunk, NULL);
+    size_t bytes = ultracdc_stream(s, 2048, 0, 65536, print_chunk, NULL);
     clock_gettime(CLOCK_MONOTONIC, &tp2);
     double elapsed = (tp2.tv_sec - tp1.tv_sec) * 1000 + (tp2.tv_nsec - tp1.tv_nsec) / 1000000.0;
     fprintf(stderr, "\n======\n%.2fmb in %.2fms (%.3f mbps)\n", 1.0 * bytes / (1024 * 1024), elapsed,

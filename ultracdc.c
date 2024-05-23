@@ -19,17 +19,7 @@ static void filltab(uint8_t patbyte)
             hdist[i][j] = __builtin_popcount(j ^ patbyte) - __builtin_popcount(i ^ patbyte);
 }
 
-static uint32_t normal_size(const uint32_t mi, uint32_t av, const uint32_t ma)
-{
-    uint32_t ns = mi + (1 << 13);
-    if (ns > av)
-        return ns;
-    if (av > ma)
-        return ma;
-    return av;
-}
-
-//#define SLIDE(d, ob, ib) (d += __builtin_popcount((ib) ^ 0xAA) - __builtin_popcount((ob) ^ 0xAA))
+// #define SLIDE(d, ob, ib) (d += __builtin_popcount((ib) ^ 0xAA) - __builtin_popcount((ob) ^ 0xAA))
 #define SLIDE(d, ob, ib) d += hdist[(ob)][(ib)]
 static uint32_t cut(const uint8_t *src, const uint32_t len, const uint32_t mi, const uint32_t ma, uint32_t ns)
 {
@@ -65,9 +55,11 @@ static uint32_t cut(const uint8_t *src, const uint32_t len, const uint32_t mi, c
 
 cdc_ctx ultracdc_init(uint32_t mi, uint32_t av, uint32_t ma)
 {
-    mi = ULTRACDC_CLAMP(mi, MIN_CHUNK_SIZE, av);
-    ma = ULTRACDC_CLAMP(ma, av, MAX_CHUNK_SIZE);
-    uint32_t ns = normal_size(mi, av, ma);
+    uint32_t ns = av == 0 ? mi + 8192 : av;
+    mi = ULTRACDC_CLAMP(mi, MIN_CHUNK_SIZE, ns);
+    ma = ULTRACDC_CLAMP(ma, ns, MAX_CHUNK_SIZE);
+    ns = ULTRACDC_CLAMP(ns, mi, ma);
+
     cdc_ctx ctx = {.mi = mi, .ma = ma, .ns = ns, .pos = 0};
     filltab(PATTERN & 0xff);
     return ctx;
