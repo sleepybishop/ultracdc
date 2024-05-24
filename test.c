@@ -1,17 +1,30 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
+
+#define XXH_STATIC_LINKING_ONLY
+#define XXH_IMPLEMENTATION
+
+#include "xxhash.h"
 
 #include "ultracdc.h"
 
-void print_chunk(void *arg, size_t offset, size_t len)
+void print_chunk(void *arg, uint8_t *data, size_t offset, size_t len)
 {
-    printf("%08zu|%08zu\n", offset, len);
+    printf("%016lx|%08zu|%08zu\n", XXH3_64bits(data, len), offset, len);
 }
 
 int main(int argc, char *argv[])
 {
-    FILE *s = fopen(argv[1], "r");
+    FILE *s = NULL;
+
+    if (argc == 2) {
+        if (memcmp(argv[1], "-", 1) == 0)
+            s = stdin;
+        else
+            s = fopen(argv[1], "r");
+    }
     if (!s)
         exit(-1);
 
@@ -23,7 +36,7 @@ int main(int argc, char *argv[])
     clock_gettime(CLOCK_MONOTONIC, &tp2);
     double elapsed = (tp2.tv_sec - tp1.tv_sec) * 1000 + (tp2.tv_nsec - tp1.tv_nsec) / 1000000.0;
     fprintf(stderr, "\n======\n%.2fmb in %.2fms (%.3f mbps)\n", 1.0 * bytes / (1024 * 1024), elapsed,
-           1000.0 * bytes / (elapsed * 1024 * 1024));
+            1000.0 * bytes / (elapsed * 1024 * 1024));
     fclose(s);
     return 0;
 }

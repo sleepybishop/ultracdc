@@ -70,7 +70,7 @@ size_t ultracdc_update(cdc_ctx *ctx, uint8_t *data, size_t len, int end, on_chun
     size_t offset = 0;
     while (((len - offset) >= ctx->ma) || (end && (offset < len))) {
         uint32_t cp = cut(data + offset, len - offset, ctx->mi, ctx->ma, ctx->ns);
-        cb(arg, ctx->pos + offset, cp);
+        cb(arg, data + offset, ctx->pos + offset, cp);
         offset += cp;
     }
     ctx->pos += offset;
