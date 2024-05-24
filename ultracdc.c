@@ -33,7 +33,7 @@ static uint32_t cut(const uint8_t *src, const uint32_t len, const uint32_t mi, c
         ns = n;
 
     uint64_t *owin = (uint64_t *)(src + mi);
-    uint64_t dist = __builtin_popcountll(*owin ^ PATTERN);
+    int64_t dist = __builtin_popcountll(*owin ^ PATTERN);
     for (uint32_t i = mi + 8; i + 8 < n; i += 8) {
         uint64_t *iwin = (uint64_t *)(src + i);
         if ((*owin ^ *iwin) == 0) {
