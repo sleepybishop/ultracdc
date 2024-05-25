@@ -6,8 +6,8 @@
 #define MAX_CHUNK_SIZE (1 << 16) // 64 KiB
 
 static const uint64_t PATTERN = 0xAAAAAAAAAAAAAAAAULL;
-static const uint64_t MASK_S = 0x2F;
-static const uint64_t MASK_L = 0x2C;
+static const uint8_t MASK_S = 0x2F;
+static const uint8_t MASK_L = 0x2C;
 static const uint64_t LEST = 64;
 
 static int8_t hdist[256][256];
@@ -53,44 +53,19 @@ static uint32_t cut(const uint8_t *src, const uint32_t len, const uint32_t mi, c
     return n;
 }
 
-cdc_ctx ultracdc_init(uint32_t mi, uint32_t av, uint32_t ma)
+chunker_cfg ultracdc_init(uint32_t mi, uint32_t av, uint32_t ma)
 {
     uint32_t ns = av == 0 ? mi + 8192 : av;
     mi = ULTRACDC_CLAMP(mi, MIN_CHUNK_SIZE, ns);
     ma = ULTRACDC_CLAMP(ma, ns, MAX_CHUNK_SIZE);
     ns = ULTRACDC_CLAMP(ns, mi, ma);
-
-    cdc_ctx ctx = {.mi = mi, .ma = ma, .ns = ns, .pos = 0};
+    
+    chunker_cfg cfg = {.mi = mi, .ma = ma, .ns = ns};
     filltab(PATTERN & 0xff);
-    return ctx;
+    return cfg;
 }
 
-size_t ultracdc_update(cdc_ctx *ctx, uint8_t *data, size_t len, int end, on_chunk cb, void *arg)
+size_t ultracdc_cut(chunker_cfg *cfg, uint8_t *data, size_t len)
 {
-    size_t offset = 0;
-    while (((len - offset) >= ctx->ma) || (end && (offset < len))) {
-        uint32_t cp = cut(data + offset, len - offset, ctx->mi, ctx->ma, ctx->ns);
-        cb(arg, data + offset, ctx->pos + offset, cp);
-        offset += cp;
-    }
-    ctx->pos += offset;
-    return offset;
-}
-
-size_t ultracdc_stream(FILE *stream, uint32_t mi, uint32_t av, uint32_t ma, on_chunk cb, void *arg)
-{
-    size_t offset = 0;
-    int end = 0;
-    cdc_ctx cdc = ultracdc_init(mi, av, ma), *ctx = &cdc;
-    size_t rs = ctx->ma * 4;
-    rs = ULTRACDC_CLAMP(rs, 0, UINT32_MAX);
-    uint8_t *data = malloc(rs);
-    while (!end) {
-        size_t ar = fread(data, 1, rs, stream);
-        end = feof(stream);
-        offset += ultracdc_update(ctx, data, ar, end, cb, arg);
-        fseek(stream, offset, SEEK_SET);
-    }
-    free(data);
-    return offset;
+    return cut(data, len, cfg->mi, cfg->ma, cfg->ns);
 }
