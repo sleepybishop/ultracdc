@@ -11,17 +11,7 @@ static const uint8_t MASK_S = 0x2F;
 static const uint8_t MASK_L = 0x2C;
 static const uint64_t LEST = 64;
 
-static int8_t hdist[256][256];
 
-static void filltab(uint8_t patbyte)
-{
-    for (int i = 0; i < 256; i++)
-        for (int j = 0; j < 256; j++)
-            hdist[i][j] = __builtin_popcount(j ^ patbyte) - __builtin_popcount(i ^ patbyte);
-}
-
-// #define SLIDE(d, ob, ib) (d += __builtin_popcount((ib) ^ 0xAA) - __builtin_popcount((ob) ^ 0xAA))
-#define SLIDE(d, ob, ib) d += hdist[(ob)][(ib)]
 static inline uint64_t read64(const uint8_t *p) {
     uint64_t v;
     memcpy(&v, p, 8);
@@ -40,8 +30,10 @@ static uint32_t cut(const uint8_t *src, const uint32_t len, const uint32_t mi, c
         ns = n;
 
     uint64_t owin = read64(src + mi);
-    int64_t dist = __builtin_popcountll(owin ^ PATTERN);
-    for (uint32_t i = mi + 8; i + 8 <= n; i += 8) {
+    uint32_t i = mi + 8;
+
+    // i < ns, use MASK_S
+    for (; i < ns && i + 8 <= n; i += 8) {
         uint64_t iwin = read64(src + i);
         if ((owin ^ iwin) == 0) {
             cnt++;
@@ -50,9 +42,29 @@ static uint32_t cut(const uint8_t *src, const uint32_t len, const uint32_t mi, c
         } else {
             cnt = 0;
             for (uint32_t j = 0; j < 8; j++) {
-                if ((dist & ((i < ns) ? MASK_S : MASK_L)) == 0)
+                uint64_t win = read64(src + i + j - 8);
+                uint32_t dist = __builtin_popcountll(win ^ PATTERN);
+                if ((dist & MASK_S) == 0)
                     return i + j;
-                SLIDE(dist, src[i + j - 8], src[i + j]);
+            }
+            owin = iwin;
+        }
+    }
+
+    // i >= ns, use MASK_L
+    for (; i + 8 <= n; i += 8) {
+        uint64_t iwin = read64(src + i);
+        if ((owin ^ iwin) == 0) {
+            cnt++;
+            if (cnt == LEST)
+                return i + 8;
+        } else {
+            cnt = 0;
+            for (uint32_t j = 0; j < 8; j++) {
+                uint64_t win = read64(src + i + j - 8);
+                uint32_t dist = __builtin_popcountll(win ^ PATTERN);
+                if ((dist & MASK_L) == 0)
+                    return i + j;
             }
             owin = iwin;
         }
@@ -68,7 +80,6 @@ chunker_cfg ultracdc_init(uint32_t mi, uint32_t av, uint32_t ma)
     ns = ULTRACDC_CLAMP(ns, mi, ma);
     
     chunker_cfg cfg = {.mi = mi, .ma = ma, .ns = ns};
-    filltab(PATTERN & 0xff);
     return cfg;
 }
 
