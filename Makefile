@@ -2,7 +2,8 @@ OBJS=\
 ultracdc.o
 
 CPPFLAGS := -D_DEFAULT_SOURCE
-CFLAGS := -g -O3 -std=c11 -Wall -march=native -funroll-loops -ftree-vectorize
+CFLAGS := -g -Ofast -std=c11 -Wall -march=native -funroll-loops -ftree-vectorize -flto -fomit-frame-pointer
+LDFLAGS := -flto
 LDLIBS := -lm
 
 all: chunker
@@ -30,3 +31,4 @@ ubsan: clean chunker
 
 scan:
 	scan-build --status-bugs $(MAKE) all
+
