@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
         size_t ar = fread(data, 1, sizeof(data), s);
         mmapring_append(&rb, data, ar);
         while ((rb.written - offset) > ckr.self->ma) {
-            uint8_t *ptr = rb.base + (offset % rb.size);
+            uint8_t *ptr = rb.base + (offset & (rb.size - 1));
             clock_gettime(CLOCK_MONOTONIC, &tp1);
             size_t cp = ckr.cut(ckr.self, ptr, rb.written - offset);
             clock_gettime(CLOCK_MONOTONIC, &tp2);
@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
         }
     }
     while (offset < rb.written) {
-        uint8_t *ptr = rb.base + (offset % rb.size);
+        uint8_t *ptr = rb.base + (offset & (rb.size - 1));
         size_t cp = ckr.cut(ckr.self, ptr, rb.written - offset);
         ckr.on_chunk(ptr, offset, cp);
         offset += cp;

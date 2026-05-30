@@ -75,7 +75,7 @@ off_t mmapring_append(mmapring_t *rng, const uint8_t *p, off_t len)
 
     memcpy(rng->base + rng->write_offset, p, wlen);
     rng->written += wlen;
-    rng->write_offset = (rng->write_offset + wlen) % rng->size;
+    rng->write_offset = (rng->write_offset + wlen) & (rng->size - 1);
 
     return wlen;
 }
