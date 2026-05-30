@@ -1,4 +1,5 @@
 #include "ultracdc.h"
+#include <string.h>
 
 #define ULTRACDC_CLAMP(x, a, b) ((x < (a)) ? (a) : ((x > b) ? b : x))
 
@@ -21,22 +22,28 @@ static void filltab(uint8_t patbyte)
 
 // #define SLIDE(d, ob, ib) (d += __builtin_popcount((ib) ^ 0xAA) - __builtin_popcount((ob) ^ 0xAA))
 #define SLIDE(d, ob, ib) d += hdist[(ob)][(ib)]
+static inline uint64_t read64(const uint8_t *p) {
+    uint64_t v;
+    memcpy(&v, p, 8);
+    return v;
+}
+
 static uint32_t cut(const uint8_t *src, const uint32_t len, const uint32_t mi, const uint32_t ma, uint32_t ns)
 {
     uint32_t n = len, cnt = 0;
 
-    if (n <= mi)
+    if (n < mi + 8)
         return n;
     if (n >= ma)
         n = ma;
     else if (n <= ns)
         ns = n;
 
-    uint64_t *owin = (uint64_t *)(src + mi);
-    int64_t dist = __builtin_popcountll(*owin ^ PATTERN);
-    for (uint32_t i = mi + 8; i + 8 < n; i += 8) {
-        uint64_t *iwin = (uint64_t *)(src + i);
-        if ((*owin ^ *iwin) == 0) {
+    uint64_t owin = read64(src + mi);
+    int64_t dist = __builtin_popcountll(owin ^ PATTERN);
+    for (uint32_t i = mi + 8; i + 8 <= n; i += 8) {
+        uint64_t iwin = read64(src + i);
+        if ((owin ^ iwin) == 0) {
             cnt++;
             if (cnt == LEST)
                 return i + 8;
@@ -44,7 +51,7 @@ static uint32_t cut(const uint8_t *src, const uint32_t len, const uint32_t mi, c
             cnt = 0;
             for (uint32_t j = 0; j < 8; j++) {
                 if ((dist & ((i < ns) ? MASK_S : MASK_L)) == 0)
-                    return i + 8;
+                    return i + j;
                 SLIDE(dist, src[i + j - 8], src[i + j]);
             }
             owin = iwin;
