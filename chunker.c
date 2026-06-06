@@ -5,8 +5,8 @@
 #define XXH_STATIC_LINKING_ONLY
 #define XXH_IMPLEMENTATION
 
-#include "xxhash.h"
 #include "mmapring.h"
+#include "xxhash.h"
 
 #include "ultracdc.h"
 
@@ -16,8 +16,7 @@ typedef struct {
     void (*on_chunk)(uint8_t *data, size_t offset, size_t len);
 } chunker;
 
-void print_chunk(uint8_t *data, size_t offset, size_t len)
-{
+void print_chunk(uint8_t *data, size_t offset, size_t len) {
     static int hdr_set;
     if (!hdr_set) {
         printf("%16s|%8s|%8s\n", "chunk_id", "offset", "length");
@@ -26,8 +25,7 @@ void print_chunk(uint8_t *data, size_t offset, size_t len)
     printf("%016lx|%08zu|%08zu\n", XXH3_64bits(data, len), offset, len);
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     FILE *s = NULL;
 
     if (argc == 2) {
@@ -49,7 +47,8 @@ int main(int argc, char *argv[])
     }
 
     chunker_cfg ckrcfg = ultracdc_init(min_chunk, 0, max_chunk);
-    chunker ckr = {.self = &ckrcfg, .cut = ultracdc_cut, .on_chunk = print_chunk};
+    chunker ckr = {
+        .self = &ckrcfg, .cut = ultracdc_cut, .on_chunk = print_chunk};
 
     size_t offset = 0;
     double elapsed = 0.0;
@@ -62,7 +61,8 @@ int main(int argc, char *argv[])
             clock_gettime(CLOCK_MONOTONIC, &tp1);
             size_t cp = ckr.cut(ckr.self, ptr, rb.written - offset);
             clock_gettime(CLOCK_MONOTONIC, &tp2);
-            elapsed += (tp2.tv_sec - tp1.tv_sec) * 1000 + (tp2.tv_nsec - tp1.tv_nsec) / 1000000.0;
+            elapsed += (tp2.tv_sec - tp1.tv_sec) * 1000 +
+                       (tp2.tv_nsec - tp1.tv_nsec) / 1000000.0;
             ckr.on_chunk(ptr, offset, cp);
             offset += cp;
         }
@@ -74,7 +74,8 @@ int main(int argc, char *argv[])
         offset += cp;
     }
 
-    fprintf(stderr, "\n======\n%.2fmb in %.2fms (%.3f mbps)\n", 1.0 * offset / (1024 * 1024), elapsed,
+    fprintf(stderr, "\n======\n%.2fmb in %.2fms (%.3f mbps)\n",
+            1.0 * offset / (1024 * 1024), elapsed,
             1000.0 * offset / (elapsed * 1024 * 1024));
 
     fclose(s);

@@ -11,15 +11,14 @@ static const uint8_t MASK_S = 0x2F;
 static const uint8_t MASK_L = 0x2C;
 static const uint64_t LEST = 64;
 
-
 static inline uint64_t read64(const uint8_t *p) {
     uint64_t v;
     memcpy(&v, p, 8);
     return v;
 }
 
-static uint32_t cut(const uint8_t *src, const uint32_t len, const uint32_t mi, const uint32_t ma, uint32_t ns)
-{
+static uint32_t cut(const uint8_t *src, const uint32_t len, const uint32_t mi,
+                    const uint32_t ma, uint32_t ns) {
     uint32_t n = len, cnt = 0;
 
     if (n < mi + 8)
@@ -72,18 +71,16 @@ static uint32_t cut(const uint8_t *src, const uint32_t len, const uint32_t mi, c
     return n;
 }
 
-chunker_cfg ultracdc_init(uint32_t mi, uint32_t av, uint32_t ma)
-{
+chunker_cfg ultracdc_init(uint32_t mi, uint32_t av, uint32_t ma) {
     uint32_t ns = av == 0 ? mi + 8192 : av;
     mi = ULTRACDC_CLAMP(mi, MIN_CHUNK_SIZE, ns);
     ma = ULTRACDC_CLAMP(ma, ns, MAX_CHUNK_SIZE);
     ns = ULTRACDC_CLAMP(ns, mi, ma);
-    
+
     chunker_cfg cfg = {.mi = mi, .ma = ma, .ns = ns};
     return cfg;
 }
 
-size_t ultracdc_cut(chunker_cfg *cfg, uint8_t *data, size_t len)
-{
+size_t ultracdc_cut(chunker_cfg *cfg, uint8_t *data, size_t len) {
     return cut(data, len, cfg->mi, cfg->ma, cfg->ns);
 }
